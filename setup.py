@@ -9,6 +9,7 @@ setup(
         "Pillow",
         "requests",
         "pandas",
+        "matplotlib",
     ],
     entry_points = {
         'console_scripts':[

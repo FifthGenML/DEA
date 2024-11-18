@@ -1,15 +1,15 @@
 #setup venv
 if [ ! -d "venv" ]; then
-    echo -e "Creating venv"
+    echo "Creating venv..."
     python3 -m venv venv
-    echo -e "Venv Created"
+    echo "Venv Created!"
 fi
-#actviate
 
-source "$(pwd)/venv/bin/activate"
+echo "Installing dependencies..."
+source "venv/bin/activate" || exit 1
 
-echo -e "activating"
 pip install --upgrade pip
 pip install -e .
 pip freeze > requirements.txt
-echo -e "activated"
+echo "Setup complete! To activate the venv, run:"
+echo "    source ./venv/bin/activate"
