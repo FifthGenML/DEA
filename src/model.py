@@ -107,8 +107,9 @@ class DEAttack:
         print(f"  - Wolf probability: min={min_prob:.3f}, avg={avg_prob:.3f}, max={max_prob:.3f}")
         
         return wolf_probs
-    
+ 
     def evolve(self, population, fitness_scores):
+        print('using new')
         new_population = []
         total_pixels = 224 * 224
         
@@ -118,26 +119,42 @@ class DEAttack:
             candidates.remove(i)
             a, b, c = np.random.choice(candidates, 3, replace=False)
             
+            x = population[i]
+            xa = population[a].astype(np.float32)
+            xb = population[b].astype(np.float32)
+            xc = population[c].astype(np.float32)
 
-            trial = population[a].copy()
-            diff = population[b].astype(np.float32) - population[c].astype(np.float32)
-            trial = trial.astype(np.float32) + self.mutation_factor * diff
-            np.clip(trial, 0, 255, out=trial)
-            trial = trial.astype(np.uint8)
+   
+            v = xa + self.mutation_factor * (xb - xc)
+            v = np.clip(v, 0, 255)  
+            v = v.astype(np.uint8)
             
-            # Additional targeted mutation for exploration
-            if np.random.random() < self.crossover_rate:
+   
+            random_index = np.random.randint(len(x.flatten()))
+            
 
-                mutate(trial, 0.4, total_pixels // 10)
+            x_flat = x.flatten()
+            v_flat = v.flatten()
             
-            # Selection step
-            trial_pred = self.surrogate_model.predict([trial])[0]
-            if trial_pred[0] < fitness_scores[i]:  # If trial is better
-                new_population.append(trial)
+            u_flat = np.empty_like(x_flat)
+            
+            for j in range(len(x_flat)):
+                if np.random.rand() <= self.crossover_rate or j == random_index:
+                    u_flat[j] = v_flat[j]
+                else:
+                    u_flat[j] = x_flat[j]
+            
+
+            u = u_flat.reshape(x.shape)
+            
+
+            trial_pred = self.surrogate_model.predict([u])[0]
+            if trial_pred[0] < fitness_scores[i]:  # If trial is better (lower wolf prob)
+                new_population.append(u)
             else:
                 new_population.append(population[i])
         
-        return new_population
+        return new_population    
     
     def attack(self, max_generations=100, api_check_interval=1):
         best_attack = None
@@ -145,15 +162,7 @@ class DEAttack:
         
         print("\nStarting Differential Evolution Attack...")
         print(f"Initial API prediction: {get_prediction_probs(self.original_image)}")
-        
-        # old_style_img = self.original_image.copy()
-        # perturb(old_style_img, magnitude=0.8, pixels=50000) 
-        
-        # new_style_img = self.population[0].copy() 
-        
-        # fig = visualize_perturbation_difference(self.original_image, old_style_img, new_style_img)
-        # display(fig)
-        # plt.close(fig)
+
         
         for gen in range(max_generations):
             print(f"\nGeneration {gen + 1}/{max_generations}")
